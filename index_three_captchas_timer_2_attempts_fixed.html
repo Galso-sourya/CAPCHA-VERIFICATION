@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registration Form with Two CAPTCHAs</title>
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: Arial, sans-serif;
+    background: #eef2f7;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    background: #fff;
+    width: 100%;
+    max-width: 430px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px #0002;
+}
+
+h2 { text-align: center; color: #333; margin-top: 0; }
+
+input[type="text"], input[type="email"], input[type="tel"] {
+    width: 100%;
+    padding: 12px;
+    margin: 9px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 15px;
+}
+
+.section-title { font-weight: bold; margin: 18px 0 8px; color: #333; }
+
+.captcha-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+#textCaptcha {
+    flex: 1;
+    background: #e1e8f0;
+    color: #222;
+    font-size: 25px;
+    font-weight: bold;
+    letter-spacing: 6px;
+    text-align: center;
+    padding: 12px;
+    border-radius: 6px;
+    font-style: italic;
+    text-decoration: line-through;
+    user-select: none;
+}
+
+.refresh {
+    padding: 12px 15px;
+    border: none;
+    background: #555;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.image-instruction {
+    margin: 8px 0 10px;
+    color: #444;
+    line-height: 1.4;
+}
+
+#targetName { font-weight: bold; color: #075dbb; }
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.image-tile {
+    min-height: 82px;
+    border: 2px solid #d5dce5;
+    background: #f7f9fc;
+    border-radius: 8px;
+    font-size: 38px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+.image-tile.selected {
+    border: 3px solid #1677e8;
+    background: #e5f1ff;
+}
+
+.image-tile.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 3px;
+    right: 7px;
+    color: #075dbb;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.image-tile:focus-visible {
+    outline: 3px solid #1677e8;
+    outline-offset: 2px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 13px;
+    background: #1677e8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+.submit-btn:hover { background: #075dbb; }
+
+#message {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 14px;
+    min-height: 20px;
+}
+
+.small-note { color: #666; font-size: 12px; margin: 5px 0; }
+
+.status-panel {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    background: #eef4ff;
+    border: 1px solid #d5e3ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 12px 0 16px;
+    font-size: 14px;
+    color: #26364d;
+}
+
+.status-panel strong { font-variant-numeric: tabular-nums; }
+
+.status-panel.expiring {
+    background: #fff0f0;
+    border-color: #f2bcbc;
+    color: #b42318;
+}
+
+#mathQuestion {
+    color: #075dbb;
+    font-size: 19px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Registration Form</h2>
+
+    <div class="status-panel" aria-live="polite">
+        <span>Time remaining: <strong id="timer">120</strong> seconds</span>
+        <span>Attempts remaining: <strong id="attempts">2</strong></span>
+    </div>
+
+    <form id="myForm">
+        <input type="text" id="name" placeholder="Enter your name" required>
+        <input type="email" id="email" placeholder="Enter your email" required>
+        <input type="tel" id="phone" placeholder="Enter mobile number" required>
+
+        <div class="section-title">1. Text CAPTCHA</div>
+        <div class="captcha-box">
+            <div id="textCaptcha" aria-label="Text CAPTCHA"></div>
+            <button type="button" class="refresh" id="refreshText" aria-label="Refresh text CAPTCHA">↻</button>
+        </div>
+        <input
+            type="text"
+            id="textCaptchaInput"
+            placeholder="Enter the text shown above"
+            autocomplete="off"
+            required
+        >
+
+        <div class="section-title">2. Image CAPTCHA</div>
+        <p class="image-instruction">
+            Select <strong>all</strong> the pictures containing:
+            <span id="targetName"></span>
+        </p>
+        <div id="imageGrid" class="image-grid" aria-label="Image CAPTCHA tiles"></div>
+        <button type="button" class="refresh" id="refreshImage">↻ Refresh image CAPTCHA</button>
+        <p class="small-note">Tap each matching picture to select it.</p>
+
+        <div class="section-title">3. Math CAPTCHA</div>
+        <p class="image-instruction">
+            Solve this question:
+            <strong id="mathQuestion"></strong>
+        </p>
+        <input
+            type="text"
+            id="mathCaptchaInput"
+            placeholder="Enter the answer"
+            inputmode="numeric"
+            autocomplete="off"
+            required
+        >
+
+        <button type="submit" class="submit-btn">Verify &amp; Submit</button>
+        <p id="message" role="alert" aria-live="polite"></p>
+    </form>
+</div>
+
+<script>
+let textCaptchaCode = "";
+let imageAnswerIndexes = [];
+let selectedImageIndexes = [];
+let mathAnswer = 0;
+
+const TOTAL_TIME_SECONDS = 120;
+const MAX_ATTEMPTS = 2;
+let timeRemaining = TOTAL_TIME_SECONDS;
+let attemptsRemaining = MAX_ATTEMPTS;
+let timerInterval = null;
+let challengeLocked = false;
+
+const imageChoices = [
+    { name: "cars", emoji: "🚗" },
+    { name: "cats", emoji: "🐱" },
+    { name: "apples", emoji: "🍎" },
+    { name: "buses", emoji: "🚌" },
+    { name: "dogs", emoji: "🐶" },
+    { name: "bicycles", emoji: "🚲" }
+];
+
+function updateStatus() {
+    document.getElementById("timer").textContent = timeRemaining;
+    document.getElementById("attempts").textContent = attemptsRemaining;
+
+    const panel = document.querySelector(".status-panel");
+    panel.classList.toggle("expiring", timeRemaining <= 10);
+}
+
+function lockForm(reason) {
+    challengeLocked = true;
+    clearInterval(timerInterval);
+
+    const form = document.getElementById("myForm");
+    form.querySelectorAll("input, button").forEach(control => {
+        control.disabled = true;
+    });
+
+    showMessage(reason, "red");
+}
+
+function startTimer() {
+    updateStatus();
+
+    timerInterval = setInterval(function () {
+        if (challengeLocked) {
+            clearInterval(timerInterval);
+            return;
+        }
+
+        timeRemaining -= 1;
+        updateStatus();
+
+        if (timeRemaining <= 0) {
+            timeRemaining = 0;
+            updateStatus();
+            lockForm("⏰ Time is up! The 120-second verification period has expired. Please reload the page to try again.");
+        }
+    }, 1000);
+}
+
+function showMessage(text, color) {
+    const message = document.getElementById("message");
+    message.textContent = text;
+    message.style.color = color;
+}
+
+function generateTextCaptcha() {
+    const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    textCaptchaCode = "";
+
+    for (let i = 0; i < 6; i++) {
+        textCaptchaCode += characters.charAt(
+            Math.floor(Math.random() * characters.length)
+        );
+    }
+
+    document.getElementById("textCaptcha").textContent = textCaptchaCode;
+    document.getElementById("textCaptchaInput").value = "";
+}
+
+function generateMathCaptcha() {
+    // Keep the numbers small enough for a quick mental calculation.
+    const firstNumber = 2 + Math.floor(Math.random() * 18);
+    const secondNumber = 1 + Math.floor(Math.random() * 15);
+    const operations = ["+", "-", "×"];
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+
+    let left = firstNumber;
+    let right = secondNumber;
+
+    if (operation === "-" && right > left) {
+        [left, right] = [right, left];
+    }
+
+    if (operation === "+") {
+        mathAnswer = left + right;
+    } else if (operation === "-") {
+        mathAnswer = left - right;
+    } else {
+        mathAnswer = left * right;
+    }
+
+    document.getElementById("mathQuestion").textContent =
+        left + " " + operation + " " + right + " = ?";
+    document.getElementById("mathCaptchaInput").value = "";
+}
+
+function generateImageCaptcha() {
+    const target = imageChoices[Math.floor(Math.random() * imageChoices.length)];
+    document.getElementById("targetName").textContent = target.name;
+
+    // Create nine tiles, including 2–3 matching pictures.
+    const tiles = [];
+    const matchingCount = 2 + Math.floor(Math.random() * 2);
+
+    for (let i = 0; i < matchingCount; i++) {
+        tiles.push({ ...target, isMatch: true });
+    }
+
+    const distractors = imageChoices.filter(item => item.name !== target.name);
+    while (tiles.length < 9) {
+        const item = distractors[Math.floor(Math.random() * distractors.length)];
+        tiles.push({ ...item, isMatch: false });
+    }
+
+    // Shuffle the tiles.
+    for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+
+    imageAnswerIndexes = tiles
+        .map((tile, index) => tile.isMatch ? index : -1)
+        .filter(index => index !== -1);
+
+    selectedImageIndexes = [];
+
+    const grid = document.getElementById("imageGrid");
+    grid.innerHTML = "";
+
+    tiles.forEach((tile, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "image-tile";
+        button.textContent = tile.emoji;
+        button.setAttribute("aria-label", "Picture tile " + (index + 1));
+        button.setAttribute("aria-pressed", "false");
+
+        button.addEventListener("click", function () {
+            if (challengeLocked) return;
+            const selected = selectedImageIndexes.includes(index);
+
+            if (selected) {
+                selectedImageIndexes = selectedImageIndexes.filter(i => i !== index);
+                button.classList.remove("selected");
+                button.setAttribute("aria-pressed", "false");
+            } else {
+                selectedImageIndexes.push(index);
+                button.classList.add("selected");
+                button.setAttribute("aria-pressed", "true");
+            }
+
+            // Clear an earlier error when the user changes their answer.
+            document.getElementById("message").textContent = "";
+        });
+
+        grid.appendChild(button);
+    });
+}
+
+document.getElementById("refreshText").addEventListener("click", function () {
+    if (challengeLocked) return;
+    generateTextCaptcha();
+    showMessage("", "");
+});
+
+document.getElementById("refreshImage").addEventListener("click", function () {
+    if (challengeLocked) return;
+    generateImageCaptcha();
+    showMessage("", "");
+});
+
+// Create both challenges when the page loads.
+generateTextCaptcha();
+generateImageCaptcha();
+generateMathCaptcha();
+startTimer();
+
+document.getElementById("myForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    if (challengeLocked) return;
+
+    const enteredText = document.getElementById("textCaptchaInput").value.trim();
+    const textIsCorrect = enteredText.toUpperCase() === textCaptchaCode;
+
+    const selectedSorted = [...selectedImageIndexes].sort((a, b) => a - b);
+    const answerSorted = [...imageAnswerIndexes].sort((a, b) => a - b);
+    const imageIsCorrect =
+        selectedSorted.length === answerSorted.length &&
+        selectedSorted.every((value, index) => value === answerSorted[index]);
+
+    const enteredMath = document.getElementById("mathCaptchaInput").value.trim();
+    const mathIsCorrect =
+        enteredMath !== "" &&
+        /^-?\d+$/.test(enteredMath) &&
+        Number(enteredMath) === mathAnswer;
+
+    // Count each complete CAPTCHA verification submission as one attempt.
+    attemptsRemaining -= 1;
+    updateStatus();
+
+    if (textIsCorrect && imageIsCorrect && mathIsCorrect) {
+        clearInterval(timerInterval);
+        challengeLocked = true;
+
+        showMessage("✓ All three CAPTCHAs verified! Form submitted successfully.", "green");
+        alert("All three CAPTCHAs are correct. Form submitted successfully!");
+
+        // Demo only: this form does not send data to a server.
+        document.getElementById("myForm").reset();
+        document.getElementById("myForm").querySelectorAll("input, button").forEach(control => {
+            control.disabled = true;
+        });
+        return;
+    }
+
+    const errors = [];
+    if (!textIsCorrect) errors.push("Text CAPTCHA is incorrect");
+    if (!imageIsCorrect) errors.push("Image CAPTCHA is incorrect (select all matching pictures)");
+    if (!mathIsCorrect) errors.push("Math CAPTCHA answer is incorrect");
+
+    if (attemptsRemaining <= 0) {
+        lockForm("✗ " + errors.join("; ") + ". Maximum of 2 attempts reached. Please reload the page to try again.");
+        return;
+    }
+
+    // Refresh challenges after a failed attempt; keep the error visible.
+    generateTextCaptcha();
+    generateImageCaptcha();
+    generateMathCaptcha();
+
+    showMessage("✗ " + errors.join("; ") + ". One attempt remains. Please try again before time runs out.", "red");
+});
+</script>
+
+</body>
+</html>
